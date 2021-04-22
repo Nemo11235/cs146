@@ -1,0 +1,44 @@
+Programming assignment: a few classes ago, we looked at getting a legal ordering of classes with prerequisites. We also looked at trying to minimize the number of semesters left if you can schedule as many courses as you like for any term in particular. For this assignment, we generalize that: for a set of jobs, find the earliest that the set can complete, assuming that jobs may be done in parallel. Each job may take different amounts of time. This is also discussed in Cormen texbook, Chapter 24.2, the PERT section.
+
+You will create a "Schedule" data structure (with a constructor), which will hopefully use an underlying directed, acyclic (more on that later) graph. You will also have an inner Job class.
+
+For Schedule, you will have a public constructor (no parameters). Additionally, you will have three public methods:
+
+public Job insert(int time) adds a new job to the schedule, where the time needed to complete the job is time. (time will be positive.) Jobs will be numbered, by the order in which they are added to your structure: the first job added is (implicitly) job 0, the next 1, even though they won't be labeled. It will return that Job.
+public Job get(int index) method, which returns the job by its number. (Use the implicit number, as described in insert. That number has nothing to do with the time for completion.) (I will only call this method with valid indices. I want you to correctly code the algorithm, rather than worrying about bullet-proofing your code against bad inputs.)
+public int finish() should return the earliest possible completion time for the entire Schedule, or -1 if it is not possible to complete it. (It is not possible to complete if there is a prerequisite cycle within the underlying graph).
+Your Job class should have exactly two public methods. It should not have a public constructor. (The Schedule class will have the ability to call the private Job class constructor, because the Job class is an inner class.)
+
+public void requires(Job j) sets up the requirement that this job requires job j to be completed before it begins.
+public int start() will return the earliest possible start time for the job. (The very earliest first start time, for jobs with no pre-requisites, is 0.) If there IS a cycle, and thus the given job can never be started (because it is on the cycle, or something on the cycle must be completed before this job starts), return -1. However, if the job can be started, even if other jobs within the overall schedule cannot be, return a valid time.
+Example: for the following calls, I show the return values expected:
+Schedule schedule = new Schedule();
+schedule.insert(8); //adds job 0 with time 8
+Schedule.Job j1 = schedule.insert(3); //adds job 1 with time 3
+schedule.insert(5); //adds job 2 with time 5
+schedule.finish(); //should return 8, since job 0 takes time 8 to complete.
+/* Note it is not the earliest completion time of any job, but the earliest the entire set can complete. */
+schedule.get(0).requires(schedule.get(2)); //job 2 must precede job 0
+schedule.finish(); //should return 13 (job 0 cannot start until time 5)
+schedule.get(0).requires(j1); //job 1 must precede job 0
+schedule.finish(); //should return 13
+schedule.get(0).start(); //should return 5
+j1.start(); //should return 0
+schedule.get(2).start(); //should return 0
+j1.requires(schedule.get(2)); //job 2 must precede job 1
+schedule.finish(); //should return 16
+schedule.get(0).start(); //should return 8
+schedule.get(1).start(); //should return 5
+schedule.get(2).start(); //should return 0
+schedule.get(1).requires(schedule.get(0)); //job 0 must precede job 1 (creates loop)
+schedule.finish(); //should return -1
+schedule.get(0).start(); //should return -1
+schedule.get(1).start(); //should return -1
+schedule.get(2).start(); //should return 0 (no loops in prerequisites)
+Your algorithm should look pretty similar to the acyclic single source shortest path one. The primary difference is that, for every node, the initial (default) start time, before any constraints are added, is 0. Instead of relaxing edges to give shorter paths, you are actually "relaxing" constraints to give higher start times. That is, in the example above, the first constraint raises 0's start time because, if 2 starts at its start time 0, and takes 5 to complete, then the start time for 0 is now max(0,5), the previous start time and the new constraint from job 2.
+Your code should be efficient. This includes two aspects: your graph should have an efficient enough implementation for basic functions, and also, you can try to figure out how, algorithmically, you can make your code more efficient specifically for this problem. That being said, there will be some tests that should pass if your code is correct but not efficient (but it can't be absurdly inefficient), and others that should pass only if you have efficient code. This is the "interesting" part of the assignment: rather than just translating from high-level pseudocode to a program (a programming problem), you are being asked to think a bit about what the algorithm does, and how to improve it.
+Also remember that we discussed two different algorithms to topologically order data. For this problem, the non-DFS topological sort solution is probably preferred, as I will create at least one test on a large graph, where DFS might hit stack-overflow errors. (Alternatively, you can make a DFS based solution that explicitly uses a stack of your own, rather than using the program stack.)
+You should submit your own JUnit tests as well, in a file with a name ending in Test.java or Tests.java. WebCAT gives feedback based on (a) how well your tests cover your own code, (b) how well your code does on your tests, and (c) how well your code does on MY tests. Just to let you know, excluding the efficiency tests (and perhaps one other test), if you fail even one of my tests, they are set up to make it likely that you fail many of them. (If you know that your code has an error, it is hard to consider your code as "working", but if you see that you are passing 90% of tests, you might feel like it works.)
+zip (or tar, or jar) your java code for both your classes and your tests cases into one file to submit, or use the submitter with your IDE. You should have more tests than the one I give above.
+No package. Schedule.java should be your main java file, along with your JUnit java tests.
+In general, you should be trying to debug your own code, rather than using WebCAT to debug it. Try to minimize your submissions. (Just to give you an idea, once upon a time, I would have allowed a maximum of 12 submissions for a problem like this. On your own, you should probably be testing your code way more than 12 times.) If you submit your code and it doesn't work, try to find a real mistake in it. There shouldn't be any data formatting errors here, so that shouldn't cause errors, and you definitely need to debug your own code. Just submitting the same code a second time is not useful.
