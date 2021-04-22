@@ -1,19 +1,22 @@
-package cs146Schedule;
+
 import java.util.*;
 
 public class Schedule {
 	public ArrayList<Job> jobList;
+	private boolean hasCycle;
 	private int minTime;
 	
 	public Schedule() {
 		jobList=new ArrayList<Job>();
 		minTime=0;
+		hasCycle=false;
 	}
 	
 	// adds a new job to the schedule, input time is the deadline of that job
 	public Job insert(int time) {
 		Job j=new Job(time);
 		jobList.add(j);
+		if(minTime<time) minTime=time;
 		return j;
 	}
 	
@@ -26,8 +29,6 @@ public class Schedule {
 	public void initialize() {
 		for(Job j : jobList) {
 			j.startTime=0;
-			j.parent=null;
-			j.finished=false;
 		}
 	}
 	
@@ -36,15 +37,17 @@ public class Schedule {
 		Queue<Job> q=new LinkedList<Job>();
 		ArrayList<Job> l=new ArrayList<Job>();
 		for(Job j : jobList) {
-			if(j.inDegree==0) q.add(j);
+			j.inDegCopy=j.inDegree;
+			if(j.inDegCopy==0) q.add(j);
 		}
 		while(!q.isEmpty()) {
 			Job j=q.remove();
 			l.add(j);
 			for(Job todo : j.next) {
-				if(--todo.inDegree==0) q.add(todo);
+				if(--todo.inDegCopy==0) q.add(todo);
 			}
 		}
+		hasCycle=(l.size()!=jobList.size());
 		return l;
 	}
 	
@@ -52,50 +55,32 @@ public class Schedule {
 	// relax the path from a to b
 	public void relax(Job a, Job b) {
 		if(a.startTime+a.time > b.startTime) {
-			b.startTime=a.startTime+a.time;
-			b.parent=a;
+			b.startTime=(a.startTime+a.time);
 			// signal flag, check for cycle
-			if(b.finished) {
-				
-			}
 			// update the minTime if there's a longer time needed to finish
 			if(b.startTime+b.time>minTime) minTime=b.startTime+b.time;
 		}
 	}
 	
-//	// ?? what is G and vertList
-//	public ArrayList<Job> topOrder(ArrayList<Job> jobs, Job start, ArrayList<Job> vertList) {
-//		start.discovered=true;
-//		for(Job j : start.next) {
-//			if(j.discovered==false) {
-//				topOrder(jobs, j, vertList);
-//			}
-//		}
-//		vertList.add(start);
-//		return vertList;
-//	}
-	
-	
 	// earliest possible completion time for the entire schedule
 	// do the dagsssp here
 	public int finish() {
 		initialize();
-		ArrayList<Job> toplist=getSortedList();
-		for(int i=toplist.size()-1; i>=0; i--) {
-			toplist.get(i).finished=true;
-			for(Job j : toplist.get(i).next) {
-				relax(toplist.get(i), j);
+		ArrayList<Job> topList=getSortedList();
+		
+		// will cause me problem later
+		for(Job v : topList) {
+			for(Job j : v.next) {
+				relax(v, j);
 			}
 		}
+		if(hasCycle) return -1;
 		return minTime;
 	}
 	
 	
-	
 	public class Job {
-		private int time, inDegree, startTime;
-		private Job parent;
-		private boolean finished;
+		private int time, inDegree, startTime, inDegCopy;
 		public ArrayList<Job> next;
 		
 		
@@ -103,31 +88,35 @@ public class Schedule {
 		private Job(int time) {
 			startTime=0;
 			this.time=time;
-			parent=null;
 			inDegree=0;
+			inDegCopy=inDegree;
 			next=new ArrayList<Job>();
 		}
 		
 		
 		public void requires(Job j) {
-			parent=j;
 			j.next.add(this);
 			inDegree++;
 		}
 		
 		
-		// return the min time required before starting the current job, if no pre, return 0; if there's a cycle, return -1;
+		// return the min time required before starting the current job, if no pre, return 0; if the job is in a cycle, return -1
 		public int start() {
-			int sum=0;
-			Job temp=this;
-			while(temp.parent!=null) {
-				sum+=temp.parent.time;
-				temp=parent;
-				if(temp.parent==this) return -1;
-			}
-			
-			return sum;
+			if(inDegree==0) return 0;
+			finish();
+			if(inDegCopy!=0) return -1;
+			return startTime;
 		}
+		
+//		public void print() {
+//			System.out.println("Time: " + time);
+//			System.out.println("startTime: " + startTime);
+//			System.out.println("inDegree: " + inDegree);
+//			for(Job j : next) {
+//				System.out.println("next time: " + j.time);
+//			}
+//			if(parent!=null) System.out.println("parent: " + parent.time);
+//		}
 		
 		
 	}
